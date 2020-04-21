@@ -115,7 +115,7 @@ Did it work?
 
 This is the point where terraform will download the appropriate plugins (now that it knows that you are using **aws**) and create a hidden **.terraform** directory that contains the downloaded plugins. If you received a message that looks like this then you have successfully initialized your terraform directory. It's worth saying this again: **keep these directories separate from application logic**
 
-![terraforminit](./images/terraforminit.png)
+![terraforminit](./terraforminit.png)
 
 So that is the __init__ step. 
 Let's get on to the __plan__ step! 
@@ -130,13 +130,13 @@ Type in `yes`
 
 **It is possible that you received an error that said that you do not have permissions to create this resource. I am not going to put the answer in here because you guys have the power to get this one done**
 
-![leroy](./images/leroy.jpeg)
+![leroy](./leroy.jpeg)
 
 If we need to...let's take five to get this last problem solved. It is the next challenge in this lab.
 
 Once you have completed this we need to make sure that our resource has been created. Let's head back to our aws management console and make sure that we can see the ec2 instance that we created (they will show up in our **default** vpc by, uh, default). **Don't forget about the region** (which you can change in the top right hand corner).
 
-![ec2prove](./images/proveec2.png)
+![ec2prove](./proveec2.png)
 
 You should see the ec2 instance now in existence. **Congratulations!** we have deployed a resource. 
 Now let's get some information about that resource!
