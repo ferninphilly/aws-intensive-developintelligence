@@ -7,7 +7,7 @@
 
 2. Now go in to **Launch Instance** and create an ec2 instance. Instead of jumping right to **Launch Instance** as the final default though we need to **configure the instance** here to make sure that it launches in the appropriate VPC (the new one that we just created).
 
-![configvpc](../images/configvpc.png)
+![configvpc](./configvpc.png)
 
 3. For **Placement group** let's leave this blank but let's do a quick summary of what this means....basically the **placement group** is your chance to create a cluster of low-latency ec2 instances that can communicate with each other quickly. From the AWS definitions:
 
@@ -15,7 +15,7 @@
 
 4. For some of the other options:
  
- ![tenancy](../images/tenancy.png)
+ ![tenancy](./images/tenancy.png)
 
 * **Shutdown Behavior** is pretty obvious
 * **Enable Termination Protection** is also pretty obvious (will stop accidental termination)
@@ -26,7 +26,7 @@
 
 6. On the next page (Step 4) DESELECT the **Delete On Termination** for the Elastic Block Store (the mounted network drive). This is *how we can keep data persistent beyond the life of the EC2 instance*
 
-![ebsperm](../images/ebsperm.png)
+![ebsperm](./ebsperm.png)
 
 7. **This will persist the EBS Block Storage beyond when we delete the EC2 instance!!** This is useful for things like retaining logs and/or state.
 
@@ -36,7 +36,7 @@
 
 10. *IT'S POSSIBLE* that your elastic IP is associated with your NAT gateway. If so go ahead and delete the nat gateway and try again...
 
-![natgateway](../images/nategateway.png)
+![natgateway](./nategateway.png)
 
 11. Now plug your elastic IP into your browser and see if it worked. Did it? 
 
@@ -46,20 +46,20 @@
 
 2. So step one is to go to the EC2 page again and scroll down until we get to the **load balancers** section. This will open up in to a menu that looks like this:
 
-![loadbalancers](../images/loadbalancers.png)
+![loadbalancers](./loadbalancers.png)
 
 3. From here all we need to do is create the load balancer. Let's choose the **http/https load balancer** BUT...we're going to go over the  Network Load balancer now....
 What's the difference? Basically...one faces the internet and one basically exists to pass data through the network from inside...so if you have an internal object that is sending high flow data you would use the Network Load balancer. If you have an internet facing application you would use http.
 
 4. When you choose to configure load balancer let's put it in our VPC along with our EC2 instance and point it to the instance.Let's add it to the PUBLIC subnet as well...
 
-![loadconfig](../images/loadconfig.png)
+![loadconfig](./loadconfig.png)
 
 5. Oh SHOOT! Are we short on availability zones? WELL! Where can we go to create new subnets??
 
 6. Let's go over to our VPC and choose "Subnets"-> Create New Subnets. Now let's create a new Subnet with CIDR **10.0.2.0/24**
 
-![subnets.png](../images/subnets.png)
+![subnets.png](./subnets.png)
 
 
 ## Launching an instance from the command line
