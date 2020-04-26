@@ -38,7 +38,7 @@ exports.handler = async (event) => {
 
 * Click **SAVE**
 
-![marklambda](./marklambda)
+![marklambda](./marklambda.png)
 
 ## Invoking your lambda
 
