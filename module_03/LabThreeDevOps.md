@@ -36,7 +36,7 @@
 
 10. *IT'S POSSIBLE* that your elastic IP is associated with your NAT gateway. If so go ahead and delete the nat gateway and try again...
 
-![natgateway](./nategateway.png)
+![natgateway](./natgateway.png)
 
 11. Now plug your elastic IP into your browser and see if it worked. Did it? 
 
