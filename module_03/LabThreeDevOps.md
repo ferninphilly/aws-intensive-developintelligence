@@ -15,7 +15,7 @@
 
 4. For some of the other options:
  
- ![tenancy](./images/tenancy.png)
+ ![tenancy](./tenancy.png)
 
 * **Shutdown Behavior** is pretty obvious
 * **Enable Termination Protection** is also pretty obvious (will stop accidental termination)
