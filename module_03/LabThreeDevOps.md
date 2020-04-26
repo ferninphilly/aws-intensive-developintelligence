@@ -1,5 +1,53 @@
 # Managing Servers state in AWS
 
+## Creating a managed relational database in AWS
+
+### STORAGE OPTIONS
+
+AWS comes with a wide variety of options for storing your data. These range from SQL based solutions like POSTGRES, MYSQL, Aurora, and even MSSQL to NOSQL based solutions like DynamoDB. 
+
+In this lab we're going to set up and deploy an RDS (Relational Database System) then work on creating Virtual Private clouds for the RDS instance to live in.
+
+Let's start from the management console and typing "RDS" into the SEARCH function. That should bring up a screen that looks like this:
+
+![createdb](./createdb.png)
+
+Click on "Create database" and let's get started.
+
+![choosedb](./choosedb.png)
+
+Let's choose the following:
+
+* MySQL database
+* Templates: FREE TIER
+* Settings: create a name
+* Credentials: Set username and password
+* DB Instance Size: Choose smallest (micro)
+* Storage: Leave defaults
+* Availability: Leave defaults
+* Connectivity: Default VPC
+* **Public Accessibility MUST be set to "yes"**
+* Database Authentication: Password Authentication
+* Click on CREATE database
+
+![dbcreating](./dbcreating.png)
+
+Now we wait. It could take a few minutes so grab a cup of joe!
+(In the interim let's take a look at my dog from Bulgaria!)
+
+![folorapassport](./florapassport.jpg)
+
+Once everything is created try to connect from your favourite GUI:
+
+Once it's done creating click on the database name. You should see an endpoint.
+Using that endpoint , the port (3306) and the connection information go ahead and connect using your favourite GUI. 
+
+![guiconnect](./guiconnect.png)
+
+CONGRATULATIONS!
+
+## Creating a VPC
+
 1. Let's start by creating a new VPC and launching an EC2 instance in it (using the management console):
   
   * Create the VPC via the launch wizard. Give it both a **public** and a **private** subnet...one to face the internet and one to store our data.
@@ -62,6 +110,3 @@ What's the difference? Basically...one faces the internet and one basically exis
 ![subnets.png](./subnets.png)
 
 
-## Launching an instance from the command line
-
-1. Another neat thing is working from the AWS CLI
