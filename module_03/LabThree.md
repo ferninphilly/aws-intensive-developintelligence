@@ -1,4 +1,4 @@
-# Lab ThreeTERRAFORM: Creating our first resources with Terraform
+# Lab Three TERRAFORM: Creating our first resources with Terraform
 
 So hopefully at this point we have our local environment set up already. If you don't please refer to the README at the beginning of this lab.
 
@@ -120,7 +120,7 @@ Did it work?
 
 This is the point where terraform will download the appropriate plugins (now that it knows that you are using **aws**) and create a hidden **.terraform** directory that contains the downloaded plugins. If you received a message that looks like this then you have successfully initialized your terraform directory. It's worth saying this again: **keep these directories separate from application logic**
 
-![terraforminit](../../images/terraforminit.png)
+![terraforminit](./images/terraforminit.png)
 
 So that is the __init__ step. 
 Let's get on to the __plan__ step! 
@@ -134,13 +134,13 @@ Type in `yes`
 
 **It is possible that you received an error that said that you do not have permissions to create this resource. I am not going to put the answer in here because you guys have the power to get this one done**
 
-![leroy](.../../images/leroy.jpeg)
+![leroy](./images/leroy.jpeg)
 
 If we need to...let's take five to get this last problem solved. It is the next challenge in this lab.
 
 Once you have completed this we need to make sure that our resource has been created. Let's head back to our aws management console and make sure that we can see the ec2 instance that we created (they will show up in our **default** vpc by, uh, default). **Don't forget about the region** (which you can change in the top right hand corner).
 
-![ec2prove](../../images/proveec2.png)
+![ec2prove](./images/proveec2.png)
 
 You should see the ec2 instance now in existence. **Congratulations!** we have deployed a resource. 
 Now let's get some information about that resource!
@@ -150,12 +150,12 @@ Type: `terraform show` into the command line. Check out the information there (i
 
 So- assuming that you've gone onto the console to check the status of your ec2 instance...well...it's not doing you much good right now. Try right-clicking on it and choose `connect`. Do you see something like this?
 
-[accessdenied](../../images/accessdenied.png)
+[accessdenied](./images/accessdenied.png)
 
 Why? 
 Simple: There is no ssh key pair associated with it. In other words- we've basically created a brick wall without a door to allow us entry.
 
-![brickwall](../../images/brickwall.jpg)
+![brickwall](./images/brickwall.jpg)
 
 So we need a way INTO this ec2 instance in order for it to do us __any__ good whatsoever. So let's work on that now. The first step here is to create some local ssh keys. Once we have those we're going to zip them up to our ec2 instance and that will act as our keypair. So let's do that:
 
@@ -216,7 +216,7 @@ resource "aws_key_pair" "ec2key" {
 
 7. Once everything is finished loading go into your management console and try right-clicking on your resource. Click "Connect" from there:
 
-![connect-to-ec2](../../images/connectec2.png)
+![connect-to-ec2](./images/connectec2.png)
 
 8. Now try ssh-ing in to your instance by typing this into the command line from your computer (if you are on windows you might need to use putty-gen or cmd...also- this is assuming that you are in the root of module 01. Obviously replace the ec2 name with whatever YOUR ec2 instance public DNS name is...).
 
