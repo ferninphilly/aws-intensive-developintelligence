@@ -150,7 +150,7 @@ Type: `terraform show` into the command line. Check out the information there (i
 
 So- assuming that you've gone onto the console to check the status of your ec2 instance...well...it's not doing you much good right now. Try right-clicking on it and choose `connect`. Do you see something like this?
 
-[accessdenied](./images/accessdenied.png)
+![accessdenied](./images/accessdenied.png)
 
 Why? 
 Simple: There is no ssh key pair associated with it. In other words- we've basically created a brick wall without a door to allow us entry.
