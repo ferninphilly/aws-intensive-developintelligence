@@ -1,353 +1,233 @@
-# Lab Three: Creating our first VPC with Terraform
+# Lab ThreeTERRAFORM: Creating our first resources with Terraform
 
-The first step to creating a stack is to set up the VPC inside which we'll deploy all of our assets. The next thing we'll want to do after that is set up the s3 buckets that will keep our **stored** data. 
+So hopefully at this point we have our local environment set up already. If you don't please refer to the README at the beginning of this lab.
 
-### Managing our terraform variables
+## Set up terraform directory structure
 
-One of the most important aspects of managing multiple terraform instances is to abstract out as many variables as possible. Much like in coding we want to use dependency injection where possible. The ideal state is one where developers can just alter the __variables.tf__ file and all of the other templates are written externally to that. 
-So considering this: in your **./terraform/variables.tf** directory paste this code in:
+First step is to go into the **./app** folder and add in a **./terraform** directory: `mkdir terraform`.
+When setting up for an aws application it is advisable that you keep your **terraform** files separate from your application (code) files. Terraform, if you recall from the lecture portion, __appends__ all of the terraform files in a directory together (except for __overwrite__ files which are merged). You don't want code interfering with that!
 
-```
-variable "aws_region" {
-  description = "Region for the VPC"
-  default = "us-east-1"
-}
+Next step is to create the three files in the terraform directory: **variables.tf**, **main.tf**, **outputs.tf** and we're going to add another one for later: **template.tf**. So make these directories (on linux/unix just **touch** them. In windows...do the windows thing that creates files)
 
-variable "vpc_cidr" {
-  description = "CIDR for the VPC"
-  default = "10.0.0.0/16"
-}
+### Creating the first terraform file
 
-variable "public_subnet_cidr" {
-  description = "CIDR for the public subnet"
-  default = "10.0.1.0/24"
-}
+In the `main.tf` file the first section we are going to create is the **provider** setion. As we're using aws for this course the parameters for this section should be pretty obvious:
 
-variable "private_subnet_cidr" {
-  description = "CIDR for the private subnet"
-  default = "10.0.2.0/24"
-}
-
-variable "ami" {
-  description = "Amazon Linux AMI"
-  default = "ami-4fffc834"
-}
-
-variable "key_path" {
-  description = "SSH Public Key path"
-  default = "<put in the full path to your ssh public key>"
+```terraform
+provider "aws" {
+  access_key = "ACCESS_KEY_HERE"
+  secret_key = "SECRET_KEY_HERE"
+  region     = "eu-west-1"
 }
 ```
 
-Obviously we have to replace the key_path in the variable immediately above. 
-The ssh key there is so that we can ssh into our ec2 instance once it's created. The CIDR blocks are attached to the two subnets that we've defined.
+So now we come to a minor issue: __we don't want to commit our access keys to git__. Obviously this would be a security issue...so from here we have several options:
 
-### The VPC resource
-Now let's create a separate file for the VPC itself in the same terraform directory. Let's call it **vpc.tf**. For more complex resources I'd recommend putting them into their own file (and as VPCs are a complex and semi-permanent resource this is where you'll want to put it). In this file we'll start creating our resource:
+* We can utilize the __~./aws/credentials__ file profiles on our local host machine
+* We can utilize the AWS environment variables on our host machine
+* We can simply put all of our key variables into our var file and not commit **variables.tf**
 
+The advantage here is that we can commit a tf file that simply maps to the credentials on the host machine. SO- terraform will use the **default** profile by default... but if you have multiple profiles that look like this:
+
+```shell
+[default]
+aws_access_key_id=<access_key>
+aws_secret_access_key=<secret_access_key>
+
+[wiseau]
+aws_access_key_id=YOURACCESSKEY
+aws_secret_access_key=SECRETKEY
 ```
-# Define our VPC
-resource "aws_vpc" "devintelpractice" {
-  cidr_block = "${var.vpc_cidr}"
-  enable_dns_hostnames = true
 
-  tags {
-    Name = "devintelpractice"
-  }
+Then you can do this:
+
+```terraform
+provider "aws" {
+  profile    = "wiseau"
+  region     = "eu-west-1"
+}
+```
+We're ready to go now! Edit your **main.tf** file so that you totally get rid of everything but the region. It should now look like this:
+
+```terraform
+provider "aws" {
+  profile    = "wiseau"
+  region     = var.region
 }
 ```
 
-The thing to note here is the **enable_dns_hostnames** tag: essentially this means that we want our vpc to assign dns names to resources (like ec2 instances) in there.
+Obviously we're going to have to define that region variable...so let's go into our **variables.tf** file and put in the following:
 
-Now- in the same file, let's add subnets! As we've decided to create a webserver instance we're going to create TWO: One **private** subnet (so available only to other resources **within** the vpc...resources like, say....a database?) and a **public** subnet that will allow people to access our VPC via an **internet gateway**. We're going to use the CIDR blocks we defined in our variables. ALSO note the two **availability zones**. 
-
-```
-# Define the public subnet
-resource "aws_subnet" "public-subnet" {
-  vpc_id = "${aws_vpc.devintelpractice.id}"
-  cidr_block = "${var.public_subnet_cidr}"
-  availability_zone = "us-east-1a"
-
-  tags {
-    Name = "PUBLIC subnet"
-  }
+```terraform
+variable "region" {
+    type = "string"
+    description = "This is the region we want to deploy to. If you want to change the region do it here"
+    default = "eu-west-1"
 }
 
-# Define the private subnet
-resource "aws_subnet" "private-subnet" {
-  vpc_id = "${aws_vpc.devintelpractice.id}"
-  cidr_block = "${var.private_subnet_cidr}"
-  availability_zone = "us-east-1b"
+variable "profile" {
+    type= "string"
+    description = "This is the string representation of the aws profile we want to use"
+    default = "wiseau"
+}
 
-  tags {
-    Name = "PRIVATE Subnet"
-  }
+variable ec2type {
+    type = "string"
+    description = "This is the ami for the type of ec2 instance we want to deploy"
+    default = "ami-06b41651a26fbba09"
 }
 ```
 
-Now we want to associate these subnets together into a group to establish the NAT communication between them: 
+This should make sense based on the lecture portion.
 
-```
-resource "aws_db_subnet_group" "beastmastersubgroup" {
-  name        = "beastmaster-subnet-group"
-  description = "Terraform example RDS subnet group"
-  subnet_ids  = ["${aws_subnet.public-subnet.id}", "${aws_subnet.private-subnet.id}"]
+Now we're ready to move on to creating resources. Let's start with an EC2 instance!
+
+### Creating our first ec2 instance
+
+We're going to start with an EC2 instance (in my experience these are the most common resources we provision __except for__ lambda resources...which we'll get to later). Recall from the lectures how we provision resources. We're going to start with a very basic image:
+
+```terraform
+resource "aws_instance" "firstec2" {
+  ami           = var.ec2type
+  instance_type = "t2.micro"
 }
 ```
 
-Note the use of the `${aws_vpc.devintelpractice.id}` here. **aws_vpc** is the resource and we're simply calling the **default.id** from there (as the resource is created and we don't need to worry about order due to the append-ing nature of terraform files in this directory). 
-So now that we have a public and private subnet setup the last thing we need to be able to access resources inside the vpc from the outside is our **internet gateway** which we will set up thusly:
+The **t2.micro** is used to keep everything in the free tier. The **ami** type can be found [here](https://cloud-images.ubuntu.com/locator/ec2/)..but spoiler: we're going with a basic ubuntu image.
 
-```
-# Define the internet gateway
-resource "aws_internet_gateway" "gw" {
-  vpc_id = "${aws_vpc.devintelpractice.id}"
+So now your **main.tf** file should look like this:
 
-  tags {
-    Name = "VPC IGW"
-  }
+```terraform
+provider "aws" {
+  profile    = var.profile
+  region     = var.region
+}
+
+resource "aws_instance" "firstec2" {
+  ami           = "ami-047bb4163c506cd98"
+  instance_type = "t2.micro"
 }
 ```
 
-Same use of the devintelpractice id from the created **aws_vpc** resource. Now we have an internet gateway that can speak to the private subnet through a **NAT gateway**. Final step is that we need a **route table**:
+Now we're ready to go. Let's **initialize**, **plan** and **apply** the terraform to get this ec2 instance deployed:
 
-```
-# Define the route table
-resource "aws_route_table" "web-public-rt" {
-  vpc_id = "${aws_vpc.devintelpractice.id}"
+### Terraform init, plan, apply
 
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = "${aws_internet_gateway.gw.id}"
-  }
+So from within your container navigate to your **terraform** directory (`cd ./terraform` assuming you mounted the **app** directory).
+Okay- so the first step from within this file (check that you are next to **main.tf** with a quick `ls`) run the following command: `terraform init`
 
-  tags {
-    Name = "Public Subnet RT"
-  }
-}
+Did it work?
 
-# Assign the route table to the public Subnet
-resource "aws_route_table_association" "web-public-rt" {
-  subnet_id = "${aws_subnet.public-subnet.id}"
-  route_table_id = "${aws_route_table.web-public-rt.id}"
-}
-```
+This is the point where terraform will download the appropriate plugins (now that it knows that you are using **aws**) and create a hidden **.terraform** directory that contains the downloaded plugins. If you received a message that looks like this then you have successfully initialized your terraform directory. It's worth saying this again: **keep these directories separate from application logic**
 
-So we've created a route table (just to show that we could) and associated it (in the last step) to our **public** subnet. That table basically says "forward all traffic (0.0.0.0/0) from the internet gateway to the public subnet".
-So now there is only one more step: we need to create our **security groups** to control access to our resources. 
-Now- with web facing resources we need two security groups: ONE to allow external access from traditional web socket ports (80, 443, 8080, and 22 so we can ssh in). Let's create that one:
+![terraforminit](../../images/terraforminit.png)
 
-```
-# Define the security group for public subnet
-resource "aws_security_group" "sgweb" {
-  name = "vpc_test_web"
-  description = "Allow incoming HTTP connections & SSH access"
+So that is the __init__ step. 
+Let's get on to the __plan__ step! 
+At a simple level let's add in a __plan__ here to see what the new resource is going to look for. Whilst still in the same directory as your terraform files run a `terraform plan`. You should see something that has a `+create` at the beginning (in green maybe(?)) and a `+aws_instance.myfirstec2`. 
+Now- this might blow your mind but the "+" sign means that we are __adding__ a resource (and it's green)....so if you had to guess- what would the __destroy__ markings look like?
+Now that you have the plan ready (basically summarizing what's going to change) you can __apply__ the changes by going into the command line and typing in `terraform apply`
 
-  ingress {
-    from_port = 80
-    to_port = 80
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+Now let's look at the plan: **1 to add, 0 to change, 0 to destroy**.
+Do you want to perform these actions? 
+Type in `yes`
 
-  ingress {
-    from_port = 8080
-    to_port = 8080
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+**It is possible that you received an error that said that you do not have permissions to create this resource. I am not going to put the answer in here because you guys have the power to get this one done**
 
-  ingress {
-    from_port = 443
-    to_port = 443
-    protocol = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+![leroy](.../../images/leroy.jpeg)
 
-  ingress {
-    from_port = -1
-    to_port = -1
-    protocol = "icmp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+If we need to...let's take five to get this last problem solved. It is the next challenge in this lab.
 
-  ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks =  ["0.0.0.0/0"]
-  }
+Once you have completed this we need to make sure that our resource has been created. Let's head back to our aws management console and make sure that we can see the ec2 instance that we created (they will show up in our **default** vpc by, uh, default). **Don't forget about the region** (which you can change in the top right hand corner).
 
-  vpc_id="${aws_vpc.devintelpractice.id}"
+![ec2prove](../../images/proveec2.png)
 
-  tags {
-    Name = "Web Server SG"
-  }
-}
-```
+You should see the ec2 instance now in existence. **Congratulations!** we have deployed a resource. 
+Now let's get some information about that resource!
+Type: `terraform show` into the command line. Check out the information there (including the public IP address). This can be useful (but could it be even MORE useful with OUTPUT variables??)
 
-...and ONE security group to associate with the resources in our **private subnet** ... namely our database. Let's set it up for a mysql database (default host 3306). If you prefer you can set it up for postgres (5432/39) or MSSQL (1433). The point is- minimize the open ports here so that hackers have trouble getting at your database:
+### Creating a Keypair
 
-```
-# Define the security group for private subnet
-resource "aws_security_group" "sgdb"{
-  name = "sg_test_web"
-  description = "Allow traffic from public subnet"
+So- assuming that you've gone onto the console to check the status of your ec2 instance...well...it's not doing you much good right now. Try right-clicking on it and choose `connect`. Do you see something like this?
 
-  ingress {
-    from_port = 3306
-    to_port = 3306
-    protocol = "tcp"
-    cidr_blocks = ["${var.public_subnet_cidr}"]
-  }
+[accessdenied](../../images/accessdenied.png)
 
-  ingress {
-    from_port = -1
-    to_port = -1
-    protocol = "icmp"
-    cidr_blocks = ["${var.public_subnet_cidr}"]
-  }
+Why? 
+Simple: There is no ssh key pair associated with it. In other words- we've basically created a brick wall without a door to allow us entry.
 
-  ingress {
-    from_port = 22
-    to_port = 22
-    protocol = "tcp"
-    cidr_blocks = ["${var.public_subnet_cidr}"]
-  }
+![brickwall](../../images/brickwall.jpg)
 
-  vpc_id = "${aws_vpc.devintelpractice.id}"
+So we need a way INTO this ec2 instance in order for it to do us __any__ good whatsoever. So let's work on that now. The first step here is to create some local ssh keys. Once we have those we're going to zip them up to our ec2 instance and that will act as our keypair. So let's do that:
 
-  tags {
-    Name = "DB SG"
-  }
+1. The first thing to note is that, although terraform does technically __have__ an **aws_key_pair** resource- it can **not** be used to create a new key pair. Instead we have to have one already created locally. Fortunately doing that is pretty simple:
+
+    * **For MAC users:** Pretty simple: `ssh-keygen -t rsa -b 4096 -C "youremail@email.com"`. Once you are asked for a file in which to save the key put in (from the root directory here): `./app/terraform/keys/practicekey.pem`.
+    * Hit enter.
+    * Choose `NO PASSPHRASE`.
+    * Hit enter twice more.
+    * You should have a file called `practicekey.pem` and `practicekey.pem.pub` created.
+    * PUB is for PUBLIC- basically that is the file you will be sending to your ec2 instance to allow it's use
+    
+    * **For WINDOWS users (this works as of a 2019-04-07 update):** Buy a mac. (Just kidding). Open up a `cmd` window by opening the search box in the bottom left and typing in `cmd`. It will default to your HOME folder. 
+    * Change directories to the root folder of this project.
+    * Type in `ssh-keygen -t rsa -b 4096 -C "youremail@email.com"` and call your key `practicekey.pem`. 
+    * Do NOT include a passphrase
+    * Put the file in `./app/terraform/keys/practicekey.pem`
+
+    * **WINDOWS users for whom the previous command did not work:** You can also use [putty](https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html) to generate an ssh key on windows. Click that link, install putty, and then follow these [instructions](https://docs.joyent.com/public-cloud/getting-started/ssh-keys/generating-an-ssh-key-manually/manually-generating-your-ssh-key-in-windows)
+
+### Passing keypair to ec2
+
+Assuming that everyone now has an ssh key generated we are ready to pass this data into our EC2 instance! So let's talk about how to do that. 
+
+1. The first thing to realize is that AWS needs a copy of your ssh keys. Thus far your ssh key exists _solely_ on your local drive. AWS needs to "know" about them so that it can pass them on to your ec2 instance. This means a new **resource**.
+
+2. So back to our terraform files! Let's add everything in. Let's go to our **main.tf** file and add this resource:
+
+```terraform
+resource "aws_key_pair" "ec2key" {
+  key_name   = "myec2key"
+  public_key = var.ssh-key
 }
 ```
 
-And that should do it for our VPC!! Now let's move on to creating some resources to go into our awesome new vpc:
+3. And, of course, we'll need to add in to our variables file:
 
-### Attaching resources to our VPC
-
-So we've decided to create an ec2 webserver in here to handle web traffic...BUT we want to be able to ssh into it so that we can, you know...access the resource. Let's create a keypair for this in our **main.tf**:
-
-```
-# Define SSH key pair for our instances
-resource "aws_key_pair" "zuuuul" {
-  key_name = "iamthekeymaster"
-  public_key = "${file("${var.key_path}")}"
+```terraform
+variable "ssh-key" {
+    type="string"
+    description = "The ssh key to access our practice ec2 instance"
+    default = "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCe/YMRL8/x5hc1okhkdiC3ijoWLw1BtnpFNc5OjpqbDXFKSNe/T/Ba97+zua8JQG6o8eA8EkBcYldNhTGSDGJaWROthp2WgeZdQsAWk3+XC5aRtxjLFdutSfrY0CErSIU0K6++J+v6s4CrgBEoUcz5BUMawqV7VphUKOkH3j8tkK6kDEHZOqwjSOiZQ4xafW0Pc85skp4iU/FcsfdsfdsEA4JVZps3e15YByBCIL0AzmwZ10wTnX4zwxBG3tlj5DaeJsJHs2BhVMbS6MQhE2WF1R5d/RQVihxvZSBC9EZ2ZEVZOU5lZky3AA5wWXWy/UWzqo/V3mgukAPsYnTviy497iOZm2SNGnGckIR8hqLByjLDq7HMrIf1BSU3PtDWH0ge7NdYjV9he/64HtgpXUnDywM6tcoNUcO0suilal0QMV3arWsUiQ4Z5OpLOm+IV1PGBuchMxoPg6cyUSJCPHMg65h8pFEB0O3i5+hlG8XH4jifyermYiOtRV1UBAUw9rQoMzRNG8KdxWu7QAFtabYU1QV45G9ZO145hKKgcs2eiqH9fcugpTTaH214H+jRPFkhcJUXl6BVbZ2YKP/8H5wcS8xKbrtepKF3jLVXpSk5fk/YDYbzVMp49ftMSogcFJBrz8iFTj4CYbpQkmaV+JoEd4mvsREU+yt/MvwAqoSQTw== fernincornwall@gmail.com"
 }
 ```
 
-Cool...so now a keypair has been created using the KEYPATH variable. Let's create the ec2 instance in **main.tf**
+4. UGH- there MUST be a better way than that!! Let's use terraform's handy **file** command! So instead...delete that `ssh-key` entry in **variables.tf** and, instead, in **main.tf** write this in (obviously for windows reverse the slashes):
 
-```
-# Define webserver inside the public subnet
-resource "aws_instance" "wb" {
-   ami  = "${var.ami}"
-   instance_type = "t1.micro"
-   key_name = "${aws_key_pair.zuuuul.id}"
-   subnet_id = "${aws_subnet.public-subnet.id}"
-   vpc_security_group_ids = ["${aws_security_group.sgweb.id}"]
-   associate_public_ip_address = true
-   source_dest_check = false
-   user_data = "${file("install.sh")}"
-
-  tags {
-    Name = "webserver"
-  }
+```terraform
+resource "aws_key_pair" "ec2key" {
+  key_name   = "myec2key"
+  public_key = file("./keys/practicekey.pub")
 }
 ```
 
-Now- you've probably noticed the **install.sh** file there in the **user_data** key. This is the standin for our **provisioners** which is what you will most likely use for provisioning resources like this in the future (ansible, puppet, chef, whatever). Terraform has a fantastic hookup that will call these provisioners for aws resources called [packer](https://www.packer.io/)...you can find them [here](https://www.packer.io/docs/provisioners/index.html) in the lower left corner. We'll talk about packer later.
-But back to our database- let's put the install script in the **./terraform/** directory next to your terraform scripts. Now- when we launch- it will be picked up and executed.
-NOW- for our DB let's use an Relational Database Service (RDS) instance that is managed by AWS so that we don't have to go to the trouble of installing and provisioning a mysql instance on a separate EC2 server (just more for us to manage!).
+5. The **file** command, as you can see, READS files directly (as utf-8 strings) which is what we're demanding here. SO- now we're ready:
 
+6. `terraform plan` and then `terraform apply`. 
 
-SO- let's create the resource. Note below that we are creating the instance in the same VPC as the ec2 web server so they can communicate on the subnet level via the NAT. ALSO note where we are associating our _security group_ to our newly created mysql instance (managed by AWS). So in **main.tf**:
+7. Once everything is finished loading go into your management console and try right-clicking on your resource. Click "Connect" from there:
 
-```
-resource "aws_db_instance" "madmax" {
-  allocated_storage    = 20
-  storage_type         = "gp2"
-  engine               = "${var.dbengine}"
-  engine_version       = "${var.dbversion}"
-  instance_class       = "${var.dbtype}"
-  name                 = "${var.db}"
-  username             = "${var.username}"
-  password             = "${var.password}"
-  parameter_group_name = "default.mysql5.7"
-  port                 = 3306
-  skip_final_snapshot       = true
-  final_snapshot_identifier = "Ignore"
-  db_subnet_group_name      = "${aws_db_subnet_group.beastmastersubgroup.id}"
-  vpc_security_group_ids    = ["${aws_security_group.sgdb.id}"]
-}
+![connect-to-ec2](../../images/connectec2.png)
 
-```
+8. Now try ssh-ing in to your instance by typing this into the command line from your computer (if you are on windows you might need to use putty-gen or cmd...also- this is assuming that you are in the root of module 01. Obviously replace the ec2 name with whatever YOUR ec2 instance public DNS name is...).
 
-And, of course, we'll need to get all of this stuff into our variables file **variable.tf**:
+`ssh -i "./app/terraform/keys/practicekey" ubuntu@ec2-34-245-40-53.eu-west-1.compute.amazonaws.com`
 
-```
-variable "dbtype" {
-    description = "This is the database type and size"
-    default = "db.t2.micro"
-}
+9. If you were able to get in then congratulations! You have a fully formed ec2 instance ready to go! LET'S DESTROY IT!
 
-variable "dbversion" {
-    description = "This is the version that we are deploying. Default is mysql 5.7"
-    default = "5.7"
-}
+### Deleting a resource:
 
-variable "username" {
-    description = "The username to access the mysql cluster"
-    default = "vorhees"
-}
+Our final exercise here will be to **delete** a resource with terraform.
+We do this (conveniently enough) with the **destroy** keyword in terraform:
+`terraform destroy`
 
-variable "password" {
-    description = "The default user password to access the mysql cluster"
-    default = "pamela"
-}
-
-variable "db" {
-    description = "This will be the default db created with the rds instance"
-    default = "mydb"
-}
-
-variable "dbengine" {
-    description = "What kind of RDS instance to deploy" 
-    default = "mysql"
-}
-```
-
-Finally let's create an output so that we can get the addresses of both the database that we want to hook up to **and** the endpoint for the rds mysql instance we just created. In outputs.tf:
-
-```
-output "rds_endpoint" {
-  value = "${aws_db_instance.madmax.endpoint}"
-}
-
-output "webserver_endpoint" {
-    value="${aws_instance.wb.public_dns}"
-}
-
-output "webserver_ip" {
-    value="${aws_instance.wb.public_ip}"
-}
-```
-
-Now let's make this happen:
-`terraform init`
-`terraform plan`
-`terraform apply`
-
-Once everything comes up you should get some outputs. DON'T try them yet...first let's check to make sure that everything was created. Head into your console and go to the ec2 section (type ec2 into services):
-
-![ec2instances](../images/ec2check.png)
-
-Don't forget to check your region!!
-Now head over to RDS and see if your mysql instance is there:
-
-![mysqlinstance](../images/mysql.png)
-
-Now that we have it let's go back to the ec2 and grab the public DNS from that. Go there in your browser:
-
-![thebees](../images/thebees.png)
+This should take down the resources created.

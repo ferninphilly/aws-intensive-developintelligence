@@ -1,6 +1,6 @@
 provider "aws" {
   profile    = "tutorial"
-  region     = "${var.region}"
+  region     = var.region
 }
 
 resource "aws_instance" "mark" {
